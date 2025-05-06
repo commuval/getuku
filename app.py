@@ -1,19 +1,23 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, jsonify
 import os
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return jsonify({
+        'status': 'online',
+        'message': 'Willkommen bei der Getuku API'
+    })
 
 @app.route('/api/status')
 def status():
+    print("Power Automate Anfrage erhalten!")
     return jsonify({
         'status': 'online',
         'message': 'Server läuft erfolgreich'
     })
-    
+
 @app.route('/getuku2')
 def getuku2():
     try:
