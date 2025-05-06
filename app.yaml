@@ -1,0 +1,12 @@
+name: flask-app
+services:
+- name: web
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: commuval/getuku
+  build_command: pip install -r requirements.txt
+  run_command: python app.py
+  http_port: 5000
+  instance_count: 1
+  instance_size_slug: basic-xxs 
