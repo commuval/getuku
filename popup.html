@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 400px;
+      padding: 16px;
+      font-family: Arial, sans-serif;
+    }
+    .task-item {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 8px;
+      background-color: #f9f9f9;
+    }
+    .task-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .task-details {
+      font-size: 0.9em;
+      color: #666;
+    }
+    #status {
+      margin: 16px 0;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .loading {
+      background-color: #e3f2fd;
+      color: #1976d2;
+    }
+    .success {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+    }
+    .error {
+      background-color: #ffebee;
+      color: #c62828;
+    }
+    button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:disabled {
+      background-color: #bdbdbd;
+      cursor: not-allowed;
+    }
+    button:hover:not(:disabled) {
+      background-color: #1565c0;
+    }
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .checkbox-container input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    .button-container {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .button-container button {
+      flex: 1;
+    }
+    .event-contact {
+      margin: 16px 0;
+      padding: 12px;
+      background-color: #f0f7ff;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+    .event-contact h3 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      color: #0066cc;
+    }
+    .event-email {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background-color: white;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+    .event-email span {
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Uku To-Do Exporter</h2>
+  <div id="eventContact" class="event-contact">
+    <h3>Private E-Mails</h3>
+    <div id="eventEmail" class="event-email">
+      <span>📧</span>
+      <span>Keine E-Mail-Adresse gefunden</span>
+    </div>
+  </div>
+  <div id="status">Suche nach Aufgaben...</div>
+  <div id="taskList"></div>
+  <div class="button-container">
+    <button id="sendSelectedMails" disabled>Ausgewählte Mails senden</button>
+    <button id="sendWelcomeMails" disabled>Alle Mails senden</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html> 

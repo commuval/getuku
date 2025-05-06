@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Uku To-Do Exporter",
+  "version": "1.0",
+  "description": "Exportiert To-Dos aus Uku und sendet Willkommensmails",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.getuku.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.svg"
+  },
+  "icons": {
+    "128": "icon.svg"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.uku.io/*"],
+      "js": ["content.js", "eventContacts.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content.js"],
+      "matches": ["*://*.getuku.com/*"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+} 
