@@ -540,6 +540,16 @@ async function sendSelectedMails() {
   }
 }
 
+// Funktion zum Aktualisieren des Zustands des "Ausgewählte Termine senden" Buttons
+function updateAppointmentsButtonState() {
+  const checkboxes = document.querySelectorAll('.appointment-checkbox');
+  const sendAppointmentsButton = document.getElementById('sendSelectedAppointments');
+  const hasChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+  if (sendAppointmentsButton) {
+    sendAppointmentsButton.disabled = !hasChecked;
+  }
+}
+
 // Funktion zum Anzeigen der Kalenderereignisse
 function displayCalendarEvents(events) {
     const taskList = document.getElementById('taskList');
@@ -695,7 +705,10 @@ function displayAppointments(events) {
   // Event-Listener für Checkboxen
   const newCheckboxes = appointmentsList.querySelectorAll('.appointment-checkbox');
   newCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', updateSelectedButtonState);
+    checkbox.addEventListener('change', () => {
+      updateSelectedButtonState();
+      updateAppointmentsButtonState();
+    });
   });
 }
 
@@ -947,51 +960,48 @@ async function initialize() {
   }
 }
 
-// Funktion zum Senden der ausgewählten Termine
+// Funktion zum Senden der ausgewählten Termine an Power Automate
 async function sendSelectedAppointments() {
-  try {
-    const appointmentsList = document.getElementById('appointmentsList');
-    const selectedCheckboxes = appointmentsList.querySelectorAll('.appointment-checkbox:checked');
+  const appointmentsList = document.getElementById('appointmentsList');
+  const selectedCheckboxes = appointmentsList.querySelectorAll('.appointment-checkbox:checked');
+  
+  if (selectedCheckboxes.length === 0) {
+    alert('Bitte wählen Sie mindestens einen Termin aus.');
+    return;
+  }
+
+  const selectedEvents = [];
+  selectedCheckboxes.forEach(checkbox => {
+    const appointmentItem = checkbox.closest('.appointment-item');
+    const eventId = checkbox.dataset.eventId;
+    const subject = appointmentItem.querySelector('.appointment-title').textContent;
+    const timeText = appointmentItem.querySelector('.appointment-time').textContent;
+    const location = appointmentItem.querySelector('.appointment-location')?.textContent.replace('📍', '').trim() || '';
     
-    if (selectedCheckboxes.length === 0) {
-      console.log('Keine Termine ausgewählt');
-      return;
-    }
-
-    // Sammle die ausgewählten Termine und ihre zugewiesenen Personen
-    const selectedAppointments = Array.from(selectedCheckboxes).map(checkbox => {
-      const appointmentItem = checkbox.closest('.appointment-item');
-      const appointmentInfo = appointmentItem.querySelector('.appointment-info');
-      const title = appointmentInfo.querySelector('.appointment-title').textContent;
-      const time = appointmentInfo.querySelector('.appointment-time').textContent;
-      const location = appointmentInfo.querySelector('.appointment-location')?.textContent || '';
-      
-      // Sammle alle zugewiesenen Personen
-      const assignedPeople = Array.from(appointmentInfo.querySelectorAll('.assignee-person')).map(person => {
-        const name = person.querySelector('.assignee-name').textContent.trim();
-        const email = person.querySelector('.assignee-email')?.textContent.trim() || '';
-        return { name, email };
-      });
-
-      return {
-        id: checkbox.dataset.eventId,
-        title,
-        time,
-        location,
-        assignedPeople
-      };
+    // Extrahiere Start- und Endzeit aus dem Zeittext
+    const [startTime, endTime] = timeText.replace('📅', '').split('-').map(t => t.trim());
+    
+    // Finde die zugewiesene Person und ihre E-Mail
+    const assigneeEmail = appointmentItem.querySelector('.assignee-email')?.textContent.replace('📧', '').trim() || '';
+    
+    selectedEvents.push({
+      id: eventId,
+      subject: subject,
+      start: startTime,
+      end: endTime,
+      location: location,
+      email: assigneeEmail
     });
+  });
 
-    console.log('Sende ausgewählte Termine:', selectedAppointments);
-
-    // Sende die ausgewählten Termine an den Server
-    const response = await fetch('https://getukuapp-pyd28.ondigitalocean.app/selected-appointments', {
+  try {
+    const response = await fetch('https://prod-36.westeurope.logic.azure.com:443/workflows/925fbd31ad5243138bee2da607bb1b42/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xirikNMkRpR8x0IFc5-7WFF2d1JkH6W0L41J1wA7It0', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        appointments: selectedAppointments
+        events: selectedEvents
       })
     });
 
@@ -999,19 +1009,17 @@ async function sendSelectedAppointments() {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const result = await response.json();
-    console.log('Server Antwort:', result);
-
-    // Zeige Erfolgsmeldung
-    const statusDiv = document.getElementById('status');
-    statusDiv.textContent = `✅ ${selectedAppointments.length} Termine wurden zur Weiterleitung markiert`;
-    statusDiv.className = 'success';
-
+    alert('Ausgewählte Termine wurden erfolgreich gesendet!');
+    
+    // Optional: Entferne die Checkbox-Markierungen nach erfolgreichem Senden
+    selectedCheckboxes.forEach(checkbox => {
+      checkbox.checked = false;
+    });
+    updateSelectedButtonState();
+    
   } catch (error) {
     console.error('Fehler beim Senden der Termine:', error);
-    const statusDiv = document.getElementById('status');
-    statusDiv.textContent = `🚨 Fehler beim Senden der Termine: ${error.message}`;
-    statusDiv.className = 'error';
+    alert('Fehler beim Senden der Termine: ' + error.message);
   }
 }
 
@@ -1021,8 +1029,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   const sendButton = document.getElementById('sendWelcomeMails');
   const sendSelectedButton = document.getElementById('sendSelectedMails');
+  const sendAppointmentsButton = document.getElementById('sendSelectedAppointments');
   
-  if (!sendButton || !sendSelectedButton) {
+  if (!sendButton || !sendSelectedButton || !sendAppointmentsButton) {
     console.error('Buttons nicht gefunden');
     const statusDiv = document.getElementById('status');
     if (statusDiv) {
@@ -1035,17 +1044,11 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('Buttons gefunden, füge Event-Listener hinzu...');
   sendButton.addEventListener('click', sendWelcomeMails);
   sendSelectedButton.addEventListener('click', sendSelectedMails);
+  sendAppointmentsButton.addEventListener('click', sendSelectedAppointments);
   
   console.log('Starte Initialisierung...');
   initialize();
   
   // Extrahiere die Event-Kontakt-E-Mail
   extractEventContactEmail();
-
-  // Füge den Event-Listener für den Senden-Button hinzu
-  if (sendSelectedButton) {
-    sendSelectedButton.addEventListener('click', async () => {
-      await sendSelectedAppointments();
-    });
-  }
 }); 

@@ -172,6 +172,20 @@
     .appointment-assignee span {
       margin-right: 8px;
     }
+    .appointments-section .button-container {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e9ecef;
+    }
+    .appointments-section button {
+      background-color: #28a745;
+    }
+    .appointments-section button:hover:not(:disabled) {
+      background-color: #218838;
+    }
+    .appointments-section button:disabled {
+      background-color: #bdbdbd;
+    }
   </style>
 </head>
 <body>
@@ -181,6 +195,9 @@
   <div id="appointmentsSection" class="appointments-section">
     <h3>Verfügbare Termine</h3>
     <div id="appointmentsList"></div>
+    <div class="button-container">
+      <button id="sendSelectedAppointments" disabled>Ausgewählte Termine senden</button>
+    </div>
   </div>
 
   <div id="eventContact" class="event-contact">
