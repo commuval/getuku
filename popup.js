@@ -363,61 +363,26 @@ async function extractEventContactEmail() {
 
 // Funktion zum Senden der Willkommensmails
 async function sendWelcomeMails() {
-  const statusDiv = document.getElementById('status');
-  const sendButton = document.getElementById('sendWelcomeMails');
-  
-  if (!statusDiv || !sendButton) {
-    console.error('DOM-Elemente nicht gefunden');
-    return;
-  }
-  
-  statusDiv.textContent = 'Sende Willkommensmails...';
-  statusDiv.className = 'loading';
-  sendButton.disabled = true;
-
+  console.log('Starte sendWelcomeMails');
   try {
-    const powerAutomateUrl = "https://prod-141.westeurope.logic.azure.com:443/workflows/7531daab38f24ec9adf8d51f8ddbd685/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rOB2FcQNH5AysWp2IQpd82BoCCa1yos1zM7vNI0Flik";
-
     for (const task of welcomeTasks) {
-      let email;
-      if (task.title.includes('Get Ready Mail')) {
-        // Verwende die gespeicherte private E-Mail-Adresse für Get Ready Mails
-        email = await loadPrivateEmail(task.assignee);
-        if (!email) {
-          console.warn('Keine private E-Mail-Adresse für Get Ready Mail gefunden');
-          continue;
-        }
-      } else {
-        // Verwende die normale E-Mail-Generierung für andere Mails
-        email = convertNameToEmail(task.assignee);
-      }
-
-      if (!email) {
-        console.warn(`Konnte keine E-Mail-Adresse für ${task.assignee} generieren`);
+      console.log('Verarbeite Task:', task);
+      
+      // Rufe die Power Automate Funktion auf
+      const result = await window.testURL(task.title, task.dueDate);
+      if (!result.success) {
+        console.error('Fehler beim Senden an Power Automate:', result.error);
         continue;
       }
-
-      await fetch(powerAutomateUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          "recipientName": task.assignee,
-          "recipientEmail": email,
-          "subject": "Willkommen bei HR Factory!",
-          "body": `Hallo ${task.assignee},\n\nwir freuen uns, Sie bei HR Factory begrüßen zu dürfen!\n\nMit freundlichen Grüßen\nIhr HR Factory Team`
-        })
-      });
+      
+      console.log('Power Automate Anfrage erfolgreich für:', task.title);
     }
-
-    statusDiv.textContent = `✅ ${welcomeTasks.length} Willkommensmails erfolgreich gesendet!`;
-    statusDiv.className = 'success';
+    
+    // Aktualisiere die UI
+    document.getElementById('status').textContent = 'Mails wurden erfolgreich gesendet';
   } catch (error) {
-    statusDiv.textContent = `🚨 Fehler beim Senden der Mails: ${error.message}`;
-    statusDiv.className = 'error';
-  } finally {
-    sendButton.disabled = false;
+    console.error('Fehler beim Senden der Mails:', error);
+    document.getElementById('status').textContent = 'Fehler beim Senden der Mails';
   }
 }
 
@@ -499,7 +464,7 @@ async function sendSelectedMails() {
         try {
           const requestBody = {
             from: email,
-            to: email
+            to: "jassy.qu@hrfactory.com"  // Feste E-Mail-Adresse für Termine weiterleiten
           };
 
           console.log('Sende Request an Power Automate:', {
@@ -624,7 +589,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-// Initialisierung: Lade Aufgaben beim Öffnen des Popups
+// Funktion zum Abrufen der Kalendertermine vom Server
+async function fetchCalendarEvents() {
+  try {
+    const response = await fetch('https://getukuapp-pyd28.ondigitalocean.app/api/calendar-events', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Empfangene Kalendertermine:', data);
+    
+    if (data.events && Array.isArray(data.events)) {
+      displayCalendarEvents(data.events);
+    } else {
+      console.error('Keine gültigen Kalendertermine empfangen');
+    }
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Kalendertermine:', error);
+  }
+}
+
+// Füge die Funktion zum Initialisieren hinzu
 async function initialize() {
   const statusDiv = document.getElementById('status');
   if (!statusDiv) {
@@ -744,6 +736,9 @@ async function initialize() {
     }
     
     await updateTaskList(welcomeTasks);
+    
+    // Rufe die Kalendertermine ab
+    await fetchCalendarEvents();
   } catch (error) {
     console.error('Fehler:', error);
     statusDiv.textContent = `🚨 Fehler beim Laden der Aufgaben: ${error.message}`;

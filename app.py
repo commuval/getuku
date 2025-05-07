@@ -1,7 +1,9 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+CORS(app)  # Aktiviere CORS für alle Routen
 
 @app.route('/')
 def home():
@@ -18,15 +20,30 @@ def status():
         'message': 'Server läuft erfolgreich'
     })
 
-@app.route('/getuku2')
+@app.route('/getuku2', methods=['GET', 'POST'])
 def getuku2():
+    if request.method == 'GET':
+        return jsonify({"message": "GET-Anfrage erfolgreich"})
+    elif request.method == 'POST':
+        data = request.get_json()
+        print("POST-Anfrage erhalten:", data)
+        return jsonify({"status": "received", "data": data})
+
+@app.route('/api/calendar-events', methods=['POST'])
+def receive_calendar_events():
     try:
+        events = request.json
+        print("Empfangene Kalendertermine:", events)
+        
+        # Hier können Sie die Termine in einer Datenbank speichern, wenn nötig
+        
         return jsonify({
             'status': 'success',
-            'message': 'Getuku2 Endpunkt funktioniert'
+            'message': 'Kalendertermine erfolgreich empfangen',
+            'events': events
         })
     except Exception as e:
-        print(f"Fehler in getuku2: {str(e)}")
+        print("Fehler beim Empfangen der Kalendertermine:", str(e))
         return jsonify({
             'status': 'error',
             'message': str(e)
