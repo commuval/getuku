@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 
 app = Flask(__name__)
-CORS(app)  # Aktiviere CORS für alle Routen
+CORS(app)  # CORS für alle Routen
 
 @app.route('/')
 def home():
@@ -51,4 +51,4 @@ def receive_calendar_events():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port) 
+    app.run(host='0.0.0.0', port=port)   # Achte darauf, dass der Host korrekt auf 0.0.0.0 gesetzt ist
