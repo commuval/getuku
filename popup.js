@@ -489,6 +489,57 @@ async function sendSelectedMails() {
         url = appointmentsUrl;
         subject = 'Preboarding: Termine weiterleiten';
         body = `Hallo ${task.assignee},\n\nhier sind Ihre Termine für das Preboarding.\n\nMit freundlichen Grüßen\nIhr HR Factory Team`;
+        
+        console.log('Verarbeite Termine weiterleiten Task:', {
+          taskTitle: task.title,
+          assignee: task.assignee,
+          email: email
+        });
+
+        try {
+          const requestBody = {
+            from: email,
+            to: email
+          };
+
+          console.log('Sende Request an Power Automate:', {
+            url: appointmentsUrl,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: requestBody
+          });
+
+          const response = await fetch(appointmentsUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify(requestBody)
+          });
+          
+          console.log('Power Automate Response Status:', response.status);
+          const responseText = await response.text();
+          console.log('Power Automate Response:', responseText);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
+          }
+
+          // Überprüfe, ob die Antwort gültiges JSON ist
+          try {
+            const responseJson = JSON.parse(responseText);
+            console.log('Power Automate Response JSON:', responseJson);
+          } catch (e) {
+            console.log('Power Automate Response ist kein JSON:', responseText);
+          }
+        } catch (error) {
+          console.error('Fehler beim Senden der Termine:', error);
+          throw error;
+        }
       } else if (task.title.includes('Boarding: Onboarding Survey')) {
         url = surveyUrl;
         subject = 'Boarding: Onboarding Survey';
