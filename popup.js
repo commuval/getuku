@@ -696,6 +696,40 @@ async function fetchAppointments() {
   }
 }
 
+// Funktion zum Löschen der Termine
+async function clearAppointments() {
+  try {
+    console.log('Lösche Termine...');
+    const response = await fetch('https://getukuapp-pyd28.ondigitalocean.app/getuku2', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Termine gelöscht:', data);
+    
+    // Lösche auch die Anzeige im UI
+    const appointmentsList = document.getElementById('appointmentsList');
+    if (appointmentsList) {
+      appointmentsList.innerHTML = '<div class="appointment-item">Keine Termine verfügbar</div>';
+    }
+  } catch (error) {
+    console.error('Fehler beim Löschen der Termine:', error);
+  }
+}
+
+// Event-Listener für das Schließen des Plugins
+window.addEventListener('unload', function() {
+  console.log('Plugin wird geschlossen, lösche Termine...');
+  clearAppointments();
+});
+
 // Füge die Funktion zum Initialisieren hinzu
 async function initialize() {
   const statusDiv = document.getElementById('status');
@@ -706,6 +740,9 @@ async function initialize() {
   
   try {
     statusDiv.textContent = 'Suche nach Aufgaben...';
+    
+    // Lösche zuerst alle vorhandenen Termine
+    await clearAppointments();
     
     // Hole den aktiven Tab
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });

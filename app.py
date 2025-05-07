@@ -23,7 +23,7 @@ def status():
         'message': 'Server läuft erfolgreich'
     })
 
-@app.route('/getuku2', methods=['GET', 'POST'])
+@app.route('/getuku2', methods=['GET', 'POST', 'DELETE'])
 def getuku2():
     global stored_events
     if request.method == 'GET':
@@ -58,6 +58,14 @@ def getuku2():
                 "status": "error",
                 "message": str(e)
             }), 500
+    elif request.method == 'DELETE':
+        # Lösche alle gespeicherten Termine
+        stored_events = []
+        print("Alle Termine wurden gelöscht")
+        return jsonify({
+            "status": "success",
+            "message": "Alle Termine wurden gelöscht"
+        })
 
 @app.route('/api/calendar-events', methods=['POST'])
 def receive_calendar_events():
