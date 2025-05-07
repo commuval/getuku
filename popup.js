@@ -1,4 +1,5 @@
 let welcomeTasks = [];
+let pollingInterval = null; // Speichert das Polling-Intervall
 
 // Funktion zum Aktualisieren der Aufgabenliste im UI
 async function updateTaskList(tasks) {
@@ -629,16 +630,47 @@ function displayAppointments(events) {
     return;
   }
 
+  // Speichere die aktuelle Scroll-Position
+  const scrollPosition = appointmentsList.scrollTop;
+
+  // Speichere den Zustand der Checkboxen
+  const checkedEvents = new Set();
+  const checkboxes = appointmentsList.querySelectorAll('.appointment-checkbox');
+  checkboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      checkedEvents.add(checkbox.dataset.eventId);
+    }
+  });
+
   let html = '';
   events.forEach(event => {
+    const isChecked = checkedEvents.has(event.id);
+
     html += `
       <div class="appointment-item">
         <div class="checkbox-container">
-          <input type="checkbox" class="appointment-checkbox" data-event-id="${event.id}">
+          <input type="checkbox" class="appointment-checkbox" data-event-id="${event.id}" ${isChecked ? 'checked' : ''}>
         </div>
         <div class="appointment-info">
           <div class="appointment-title">${event.subject || 'Kein Titel'}</div>
           <div class="appointment-details">
+            <div class="appointment-assignee">
+              <div class="assignee-header">Zugewiesene Personen:</div>
+              ${event.assignedPeople.map(person => `
+                <div class="assignee-person">
+                  <div class="assignee-name">
+                    <span>👤</span>
+                    ${person.name}
+                  </div>
+                  ${person.email ? `
+                    <div class="assignee-email">
+                      <span>📧</span>
+                      ${person.email}
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
             <div class="appointment-time">
               <span>📅</span>
               ${formatDateTime(event.start)} - ${formatDateTime(event.end)}
@@ -657,9 +689,12 @@ function displayAppointments(events) {
 
   appointmentsList.innerHTML = html;
 
+  // Stelle die Scroll-Position wieder her
+  appointmentsList.scrollTop = scrollPosition;
+
   // Event-Listener für Checkboxen
-  const checkboxes = appointmentsList.querySelectorAll('.appointment-checkbox');
-  checkboxes.forEach(checkbox => {
+  const newCheckboxes = appointmentsList.querySelectorAll('.appointment-checkbox');
+  newCheckboxes.forEach(checkbox => {
     checkbox.addEventListener('change', updateSelectedButtonState);
   });
 }
@@ -683,7 +718,29 @@ async function fetchAppointments() {
     console.log('Empfangene Termine:', data);
     
     if (data.events && Array.isArray(data.events)) {
-      displayAppointments(data.events);
+      // Finde alle Tasks mit "Termine weiterleiten"
+      const appointmentTasks = welcomeTasks.filter(task => 
+        task.title.includes('Preboarding: Termine weiterleiten')
+      );
+      
+      console.log('Gefundene Termine-weiterleiten Tasks:', appointmentTasks);
+      
+      // Füge die zugewiesenen Personen zu den Terminen hinzu
+      const eventsWithAssignee = data.events.map(event => {
+        // Erstelle ein Array mit allen zugewiesenen Personen
+        const assignedPeople = appointmentTasks.map(task => ({
+          name: task.assignee,
+          email: convertNameToEmail(task.assignee)
+        }));
+        
+        return {
+          ...event,
+          assignedPeople: assignedPeople // Speichere alle zugewiesenen Personen
+        };
+      });
+      
+      console.log('Termine mit zugewiesenen Personen:', eventsWithAssignee);
+      displayAppointments(eventsWithAssignee);
     } else {
       console.error('Keine gültigen Termine empfangen');
       document.getElementById('appointmentsList').innerHTML = 
@@ -724,9 +781,32 @@ async function clearAppointments() {
   }
 }
 
+// Funktion zum Starten des Pollings
+function startPolling() {
+  // Stoppe existierendes Polling, falls vorhanden
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+  }
+  
+  // Starte neues Polling alle 5 Sekunden
+  pollingInterval = setInterval(async () => {
+    console.log('Prüfe auf neue Termine...');
+    await fetchAppointments();
+  }, 5000); // 5000ms = 5 Sekunden
+}
+
+// Funktion zum Stoppen des Pollings
+function stopPolling() {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+}
+
 // Event-Listener für das Schließen des Plugins
 window.addEventListener('unload', function() {
-  console.log('Plugin wird geschlossen, lösche Termine...');
+  console.log('Plugin wird geschlossen, stoppe Polling und lösche Termine...');
+  stopPolling();
   clearAppointments();
 });
 
@@ -857,11 +937,80 @@ async function initialize() {
     // Rufe die Kalendertermine ab
     await fetchCalendarEvents();
     
-    // Rufe die Termine ab
+    // Rufe die Termine ab und starte Polling
     await fetchAppointments();
+    startPolling();
   } catch (error) {
     console.error('Fehler:', error);
     statusDiv.textContent = `🚨 Fehler beim Laden der Aufgaben: ${error.message}`;
+    statusDiv.className = 'error';
+  }
+}
+
+// Funktion zum Senden der ausgewählten Termine
+async function sendSelectedAppointments() {
+  try {
+    const appointmentsList = document.getElementById('appointmentsList');
+    const selectedCheckboxes = appointmentsList.querySelectorAll('.appointment-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+      console.log('Keine Termine ausgewählt');
+      return;
+    }
+
+    // Sammle die ausgewählten Termine und ihre zugewiesenen Personen
+    const selectedAppointments = Array.from(selectedCheckboxes).map(checkbox => {
+      const appointmentItem = checkbox.closest('.appointment-item');
+      const appointmentInfo = appointmentItem.querySelector('.appointment-info');
+      const title = appointmentInfo.querySelector('.appointment-title').textContent;
+      const time = appointmentInfo.querySelector('.appointment-time').textContent;
+      const location = appointmentInfo.querySelector('.appointment-location')?.textContent || '';
+      
+      // Sammle alle zugewiesenen Personen
+      const assignedPeople = Array.from(appointmentInfo.querySelectorAll('.assignee-person')).map(person => {
+        const name = person.querySelector('.assignee-name').textContent.trim();
+        const email = person.querySelector('.assignee-email')?.textContent.trim() || '';
+        return { name, email };
+      });
+
+      return {
+        id: checkbox.dataset.eventId,
+        title,
+        time,
+        location,
+        assignedPeople
+      };
+    });
+
+    console.log('Sende ausgewählte Termine:', selectedAppointments);
+
+    // Sende die ausgewählten Termine an den Server
+    const response = await fetch('https://getukuapp-pyd28.ondigitalocean.app/selected-appointments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        appointments: selectedAppointments
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('Server Antwort:', result);
+
+    // Zeige Erfolgsmeldung
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = `✅ ${selectedAppointments.length} Termine wurden zur Weiterleitung markiert`;
+    statusDiv.className = 'success';
+
+  } catch (error) {
+    console.error('Fehler beim Senden der Termine:', error);
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = `🚨 Fehler beim Senden der Termine: ${error.message}`;
     statusDiv.className = 'error';
   }
 }
@@ -892,4 +1041,11 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Extrahiere die Event-Kontakt-E-Mail
   extractEventContactEmail();
+
+  // Füge den Event-Listener für den Senden-Button hinzu
+  if (sendSelectedButton) {
+    sendSelectedButton.addEventListener('click', async () => {
+      await sendSelectedAppointments();
+    });
+  }
 }); 

@@ -8,6 +8,9 @@ CORS(app)  # CORS für alle Routen
 # Speichert die Termine im Speicher (in einer Produktionsumgebung sollten Sie eine Datenbank verwenden)
 stored_events = []
 
+# Speichert die ausgewählten Termine
+selected_appointments = []
+
 @app.route('/')
 def home():
     return jsonify({
@@ -86,6 +89,37 @@ def receive_calendar_events():
             'status': 'error',
             'message': str(e)
         }), 500
+
+@app.route('/selected-appointments', methods=['POST'])
+def handle_selected_appointments():
+    try:
+        data = request.json
+        if not data or 'appointments' not in data:
+            return jsonify({'error': 'Keine Termine im Request'}), 400
+
+        # Speichere die ausgewählten Termine
+        global selected_appointments
+        selected_appointments = data['appointments']
+
+        # Hier kann Power Automate die Termine abrufen
+        return jsonify({
+            'message': 'Termine erfolgreich gespeichert',
+            'count': len(selected_appointments)
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get-selected-appointments', methods=['GET'])
+def get_selected_appointments():
+    """Endpunkt für Power Automate, um die ausgewählten Termine abzurufen"""
+    try:
+        global selected_appointments
+        return jsonify({
+            'appointments': selected_appointments
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
