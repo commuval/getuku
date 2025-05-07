@@ -95,10 +95,58 @@
     .event-email span {
       margin-right: 8px;
     }
+    .appointments-section {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 8px;
+    }
+    .appointments-section h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+      font-size: 16px;
+    }
+    .appointment-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 12px;
+      margin-bottom: 10px;
+      background-color: white;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .appointment-info {
+      flex: 1;
+      margin-left: 10px;
+    }
+    .appointment-title {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    .appointment-details {
+      font-size: 13px;
+      color: #666;
+    }
+    .appointment-time, .appointment-location {
+      display: flex;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .appointment-time span, .appointment-location span {
+      margin-right: 6px;
+    }
   </style>
 </head>
 <body>
   <h2>Uku To-Do Exporter</h2>
+  
+  <!-- Neuer Bereich für Termine -->
+  <div id="appointmentsSection" class="appointments-section">
+    <h3>Verfügbare Termine</h3>
+    <div id="appointmentsList"></div>
+  </div>
+
   <div id="eventContact" class="event-contact">
     <h3>Private E-Mails</h3>
     <div id="eventEmail" class="event-email">

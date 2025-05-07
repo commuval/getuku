@@ -5,6 +5,9 @@ import os
 app = Flask(__name__)
 CORS(app)  # CORS für alle Routen
 
+# Speichert die Termine im Speicher (in einer Produktionsumgebung sollten Sie eine Datenbank verwenden)
+stored_events = []
+
 @app.route('/')
 def home():
     return jsonify({
@@ -22,12 +25,39 @@ def status():
 
 @app.route('/getuku2', methods=['GET', 'POST'])
 def getuku2():
+    global stored_events
     if request.method == 'GET':
-        return jsonify({"message": "GET-Anfrage erfolgreich"})
+        # Gebe alle gespeicherten Termine zurück
+        return jsonify({
+            "status": "success",
+            "events": stored_events
+        })
     elif request.method == 'POST':
-        data = request.get_json()
-        print("POST-Anfrage erhalten:", data)
-        return jsonify({"status": "received", "data": data})
+        try:
+            data = request.get_json()
+            print("POST-Anfrage erhalten:", data)
+            
+            # Speichere die neuen Termine
+            if 'events' in data and isinstance(data['events'], list):
+                stored_events = data['events']
+                print("Termine gespeichert:", stored_events)
+                return jsonify({
+                    "status": "success",
+                    "message": f"{len(stored_events)} Termine erfolgreich gespeichert",
+                    "events": stored_events
+                })
+            else:
+                return jsonify({
+                    "status": "error",
+                    "message": "Ungültiges Datenformat. 'events' Array erwartet."
+                }), 400
+                
+        except Exception as e:
+            print("Fehler beim Verarbeiten der POST-Anfrage:", str(e))
+            return jsonify({
+                "status": "error",
+                "message": str(e)
+            }), 500
 
 @app.route('/api/calendar-events', methods=['POST'])
 def receive_calendar_events():

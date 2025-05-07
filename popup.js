@@ -616,6 +616,86 @@ async function fetchCalendarEvents() {
   }
 }
 
+// Funktion zum Anzeigen der Termine
+function displayAppointments(events) {
+  const appointmentsList = document.getElementById('appointmentsList');
+  if (!appointmentsList) {
+    console.error('Appointments-Liste nicht gefunden');
+    return;
+  }
+
+  if (!events || events.length === 0) {
+    appointmentsList.innerHTML = '<div class="appointment-item">Keine Termine gefunden</div>';
+    return;
+  }
+
+  let html = '';
+  events.forEach(event => {
+    html += `
+      <div class="appointment-item">
+        <div class="checkbox-container">
+          <input type="checkbox" class="appointment-checkbox" data-event-id="${event.id}">
+        </div>
+        <div class="appointment-info">
+          <div class="appointment-title">${event.subject || 'Kein Titel'}</div>
+          <div class="appointment-details">
+            <div class="appointment-time">
+              <span>📅</span>
+              ${formatDateTime(event.start)} - ${formatDateTime(event.end)}
+            </div>
+            ${event.location ? `
+              <div class="appointment-location">
+                <span>📍</span>
+                ${event.location}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  appointmentsList.innerHTML = html;
+
+  // Event-Listener für Checkboxen
+  const checkboxes = appointmentsList.querySelectorAll('.appointment-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedButtonState);
+  });
+}
+
+// Funktion zum Abrufen der Termine vom Server
+async function fetchAppointments() {
+  try {
+    console.log('Starte Abruf der Termine...');
+    const response = await fetch('https://getukuapp-pyd28.ondigitalocean.app/getuku2', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Empfangene Termine:', data);
+    
+    if (data.events && Array.isArray(data.events)) {
+      displayAppointments(data.events);
+    } else {
+      console.error('Keine gültigen Termine empfangen');
+      document.getElementById('appointmentsList').innerHTML = 
+        '<div class="appointment-item">Keine Termine verfügbar</div>';
+    }
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Termine:', error);
+    document.getElementById('appointmentsList').innerHTML = 
+      '<div class="appointment-item error">Fehler beim Laden der Termine</div>';
+  }
+}
+
 // Füge die Funktion zum Initialisieren hinzu
 async function initialize() {
   const statusDiv = document.getElementById('status');
@@ -739,6 +819,9 @@ async function initialize() {
     
     // Rufe die Kalendertermine ab
     await fetchCalendarEvents();
+    
+    // Rufe die Termine ab
+    await fetchAppointments();
   } catch (error) {
     console.error('Fehler:', error);
     statusDiv.textContent = `🚨 Fehler beim Laden der Aufgaben: ${error.message}`;
